@@ -12,9 +12,7 @@ maintainers = [
 license = "MIT"
 
 readme = "README.md"
-packages = [
-    { include = "applepassgenerator", from = "src" }
-]
+packages = [{ include = "applepassgenerator", from = "src" }]
 
 homepage = "https://primedigitalglobal.github.io/applepassgenerator"
 repository = "https://github.com/PrimedigitalGlobal/applepassgenerator"
@@ -28,12 +26,12 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Programming Language :: Python :: 3.9",
-    "Operating System :: OS Independent"
+    "Operating System :: OS Independent",
 ]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-cryptography = "^37.0.2"
+cryptography = ">=43.0.3"
 
 [tool.poetry.dev-dependencies]
 bump2version = "^1.0.1"
