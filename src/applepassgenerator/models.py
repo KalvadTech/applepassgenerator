@@ -360,8 +360,10 @@ class ApplePass(object):
         containing a list of files included in the pass file (and their hashes).
         """
         cert = x509.load_pem_x509_certificate(self._read_file_bytes(certificate))
+        if password is not None:
+            password=password.encode("UTF-8")
         priv_key = serialization.load_pem_private_key(
-            self._read_file_bytes(key), password=password.encode("UTF-8")
+            self._read_file_bytes(key), password=password
         )
         wwdr_cert = x509.load_pem_x509_certificate(
             self._read_file_bytes(wwdr_certificate)
