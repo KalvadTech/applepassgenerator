@@ -250,7 +250,6 @@ class ApplePass(object):
         organization_name="",
         team_identifier="",
     ):
-
         self._files = {}  # Holds the files to include in the .pkpass
         self._hashes = {}  # Holds the SHAs of the files array
 
@@ -361,7 +360,7 @@ class ApplePass(object):
         """
         cert = x509.load_pem_x509_certificate(self._read_file_bytes(certificate))
         if password is not None:
-            password=password.encode("UTF-8")
+            password = password.encode("UTF-8")
         priv_key = serialization.load_pem_private_key(
             self._read_file_bytes(key), password=password
         )
