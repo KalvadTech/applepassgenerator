@@ -126,7 +126,7 @@ class ApplePass:
             return f.read()
 
     def _create_pass_json(self):
-        return json.dumps(self, default=pass_handler)
+        return json.dumps(self, default=pass_handler, ensure_ascii=False)
 
     def _create_manifest(self, pass_json):
         """
