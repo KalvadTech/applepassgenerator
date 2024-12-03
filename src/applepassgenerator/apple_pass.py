@@ -221,7 +221,7 @@ class ApplePass:
             legacy_barcode = self.barcode
             new_barcodes = [self.barcode.json_dict()]
 
-            if self.barcode.format not in original_formats:
+            if self.barcode._format not in original_formats:
                 legacy_barcode = Barcode(
                     message=self.barcode.message,
                     format=BarcodeFormat.PDF417,
