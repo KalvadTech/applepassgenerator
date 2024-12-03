@@ -5,7 +5,7 @@ import hashlib
 import json
 import zipfile
 from dataclasses import dataclass, field
-from io import BytesIO
+from io import BufferedReader, BytesIO
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
@@ -88,8 +88,8 @@ class ApplePass:
         key: Union[str, Path],
         wwdr_certificate: Union[str, Path],
         password: Optional[str] = None,
-        zip_file: Optional[BytesIO] = None,
-    ) -> BytesIO:
+        pass_path: Optional[Union[str, Path]] = "pass.pkpass",
+    ) -> str:
         """
         Create and sign the pass package.
 
@@ -98,10 +98,11 @@ class ApplePass:
             key: Path to the private key
             wwdr_certificate: Path to the WWDR certificate
             password: Optional password for the private key
-            zip_file: Optional BytesIO object to write to
+            pass_path: File path to save the .pkpass file. Defaults to "pass.pkpass"
+                      in the current directory.
 
         Returns:
-            BytesIO object containing the signed .pkpass file
+            String path to the created .pkpass file
         """
         try:
             pass_json = self._create_pass_json()
@@ -110,10 +111,8 @@ class ApplePass:
                 manifest, certificate, key, wwdr_certificate, password
             )
 
-            if not zip_file:
-                zip_file = BytesIO()
-            self._create_zip(pass_json, manifest, signature, zip_file=zip_file)
-            return zip_file
+            self._create_zip(pass_json, manifest, signature, pass_path)
+            return str(pass_path)
         except Exception as e:
             raise PassCreationError(f"Failed to create pass: {str(e)}") from e
 
@@ -133,9 +132,20 @@ class ApplePass:
         """
         Creates the hashes for all the files included in the pass file.
         """
-        self._hashes["pass.json"] = hashlib.sha1(pass_json.encode("utf-8")).hexdigest()
+        self._hashes["pass.json"] = hashlib.sha1(pass_json.encode("UTF-16")).hexdigest()
         for filename, filedata in self._files.items():
-            self._hashes[filename] = hashlib.sha1(filedata).hexdigest()
+            if isinstance(filedata, (bytes, bytearray)):
+                data = filedata
+            elif isinstance(filedata, (BytesIO, BufferedReader)):
+                filedata.seek(0)
+                data = filedata.read()
+            elif isinstance(filedata, str):
+                data = filedata.encode("utf-16")
+            else:
+                raise TypeError(
+                    f"Unsupported file data type for {filename}: {type(filedata)}"
+                )
+            self._hashes[filename] = hashlib.sha1(data).hexdigest()
         return json.dumps(self._hashes)
 
     def _create_signature_crypto(
@@ -149,7 +159,7 @@ class ApplePass:
         """
         cert = x509.load_pem_x509_certificate(self._read_file_bytes(certificate))
         if password is not None:
-            password = password.encode("UTF-8")
+            password = password.encode("UTF-16")
         priv_key = serialization.load_pem_private_key(
             self._read_file_bytes(key), password=password
         )
@@ -160,20 +170,32 @@ class ApplePass:
         options = [pkcs7.PKCS7Options.DetachedSignature]
         return (
             pkcs7.PKCS7SignatureBuilder()
-            .set_data(manifest.encode("UTF-8"))
+            .set_data(manifest.encode("UTF-16"))
             .add_signer(cert, priv_key, hashes.SHA1())
             .add_certificate(wwdr_cert)
             .sign(serialization.Encoding.DER, options)
         )
 
     # Creates .pkpass (zip archive)
-    def _create_zip(self, pass_json, manifest, signature, zip_file=None):
-        zf = zipfile.ZipFile(zip_file or "pass.pkpass", "w")
+    def _create_zip(self, pass_json, manifest, signature, output):
+        """Creates .pkpass (zip archive)"""
+        zf = zipfile.ZipFile(output, "w")
         zf.writestr("signature", signature)
         zf.writestr("manifest.json", manifest)
         zf.writestr("pass.json", pass_json)
         for filename, filedata in self._files.items():
-            zf.writestr(filename, filedata)
+            if isinstance(filedata, (bytes, bytearray)):
+                data = filedata
+            elif isinstance(filedata, (BytesIO, BufferedReader)):
+                filedata.seek(0)
+                data = filedata.read()
+            elif isinstance(filedata, str):
+                data = filedata.encode("utf-16")
+            else:
+                raise TypeError(
+                    f"Unsupported file data type for {filename}: {type(filedata)}"
+                )
+            zf.writestr(filename, data)
         zf.close()
 
     def json_dict(self) -> Dict[str, Any]:
