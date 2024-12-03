@@ -2,9 +2,11 @@ name: Build
 
 on:
   push:
-    branches: [ main ]
+    branches: 
+      - '**'  # Matches pushes to all branches
   pull_request:
-    branches: [ main ]
+    branches:
+      - '**'  # Matches pull requests targeting any branch
 
 jobs:
   build:
